@@ -1,0 +1,26 @@
+<?xml version="1.0" ?><kml xmlns="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2">
+	<Document>
+		<name>current_default.kml</name>
+		<Folder>
+			<name>Current Journey</name>
+			<open>1</open>
+			<LookAt>
+				<longitude>151.2445754537046</longitude>
+				<latitude>-27.45851293373997</latitude>
+				<altitude>0</altitude>
+				<heading>1.121579118384636</heading>
+				<tilt>0</tilt>
+				<range>4444753.409295037</range>
+				<gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
+			</LookAt>
+			<Placemark>
+				<name>Path</name>
+				<styleUrl>#m_ylw-pushpin300</styleUrl>
+				<LineString>
+					<tessellate>1</tessellate>
+					<coordinates></coordinates>
+				</LineString>
+			</Placemark>
+		</Folder>
+	</Document>
+</kml>
