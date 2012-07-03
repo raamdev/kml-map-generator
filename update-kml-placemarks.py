@@ -68,8 +68,8 @@ def updateCurrentLocation(currentBaseFolder):
 				for desc in description:
 					orig_desc = desc.firstChild.wholeText.strip()
 					if orig_desc.startswith("Current Location: "):
-						desc.firstChild.wholeText.strip().replace("Current Location: ", '')
-						print ">> Removed old Current Location from '%s'" % desc.firstChild.wholeText.strip()
+						desc.firstChild.replaceWholeText(desc.firstChild.wholeText.strip().replace("Current Location: ", ''))
+						print ">> Removed old Current Location from '%s'" % desc.firstChild.wholeText
 	
 def getNewestPublishedPlacemark(currentBaseFolder):
 	"""search currentBaseFolder <Placemark>'s for newest <published> date"""	
@@ -112,7 +112,7 @@ def cleanFoursquareDescription(description):
 
 	# remove extraneous hyphen after first anchor element
 	if description.find("</a>-") > -1:
-		description = description.replace("</a>-", "</a>: ", 1)
+		description = description.replace("</a>-", "</a>:", 1)
 		
 	return description
 		
@@ -240,17 +240,18 @@ offset_date = getNewestPublishedPlacemark(current_base)
 print "\n> Fetching Placemarks from Foursquare KML..."
 processFoursquarePlacemarks(current_dom, current_base, foursquare_base, offset_date)
 
-print "\n> Updating Current Location in %r..." % current_kml_file
-updateCurrentLocation(current_base)
+if newPlacemarks > 0:
+	print "\n> Updating Current Location in %r..." % current_kml_file
+	updateCurrentLocation(current_base)
 
-print "\n> Writing new KML document to %s..." % current_kml_file
-new_current_file = open(current_kml_file, "w")
-current_dom.writexml(new_current_file)
-new_current_file.close()
+#print "\n> Writing new KML document to %s..." % current_kml_file
+#new_current_file = open(current_kml_file, "w")
+#current_dom.writexml(new_current_file)
+#new_current_file.close()
 
 print "\n> Stats: %r new placemarks, %r skipped placemarks" % (newPlacemarks, skippedPlacemarks)
 
 now = datetime.datetime.now()
 print "\n> Finished processing on " + now.strftime("%Y-%m-%d %H:%M:%S")
 
-#print current_dom.toprettyxml('', '')
+print current_dom.toprettyxml('', '')
