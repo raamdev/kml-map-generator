@@ -244,14 +244,14 @@ if newPlacemarks > 0:
 	print "\n> Updating Current Location in %r..." % current_kml_file
 	updateCurrentLocation(current_base)
 
-#print "\n> Writing new KML document to %s..." % current_kml_file
-#new_current_file = open(current_kml_file, "w")
-#current_dom.writexml(new_current_file)
-#new_current_file.close()
+print "\n> Writing new KML document to %s..." % current_kml_file
+new_current_file = open(current_kml_file, "w")
+current_dom.writexml(new_current_file)
+new_current_file.close()
 
 print "\n> Stats: %r new placemarks, %r skipped placemarks" % (newPlacemarks, skippedPlacemarks)
 
 now = datetime.datetime.now()
 print "\n> Finished processing on " + now.strftime("%Y-%m-%d %H:%M:%S")
 
-print current_dom.toprettyxml('', '')
+#print current_dom.toprettyxml('', '')
