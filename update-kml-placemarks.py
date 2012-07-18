@@ -2,7 +2,11 @@ import datetime
 import xml.dom.minidom as DOM
 from xml.dom.minidom import parseString
 from dateutil.parser import parse
-import json # used to parse json data from Google Maps API
+
+# used to parse json data from Google Maps API
+try: import simplejson as json
+except ImportError: import json
+
 import urllib2 # library to do http requests
 import urllib # used for urlencode method
 
@@ -13,7 +17,7 @@ print "\n\n> Started processing on " + now.strftime("%Y-%m-%d %H:%M:%S")
 pathPlacemarkName = 'Path' # this is the name of the Placemark in current_kml_file that includes a LineString of the path
 
 # URL to your Foursquare KML feed (login to Foursquare and visit https://feeds.foursquare.com/history/)
-foursquare_kml_url = 'https://feeds.foursquare.com/history/NAWZJFBHVAUBTCOWGIH5XMNZ1M3QXLMI.kml?count=49'
+foursquare_kml_url = 'https://feeds.foursquare.com/history/NAWZJFBHVAUBTCOWGIH5XMNZ1M3QXLMI.kml'
 
 # KML file that we're updating; new Foursquare placemarks will be appended here
 current_kml_file = 'current_sample.kml'
@@ -26,8 +30,7 @@ skippedPlacemarks = 0
 # Gets json location data for a given lat/lon using the Google Maps API
 # Sourced from http://stackoverflow.com/a/8395513/130664
 def get_geonames(lat, lon, types):
-	url = 'http://maps.googleapis.com/maps/api/geocode/json' + \
-			'?latlng={},{}&sensor=false'.format(lat, lon)
+	url = 'http://maps.googleapis.com/maps/api/geocode/json?latlng=%s,%s&sensor=false' % (lat, lon)
 	jsondata = json.load(urllib2.urlopen(url))
 	address_comps = jsondata['results'][0]['address_components']
 	filter_method = lambda x: len(set(x['types']).intersection(types))
@@ -202,6 +205,13 @@ def appendCurrentPlacemark(current_dom, currentBaseFolder, newPlacemark):
 	for point in pointElements:
 		placemarkCoordinates = point.getElementsByTagName("coordinates")[0].firstChild.wholeText.strip()
 
+	# Get the actual City, State, Country for these coordinates and use that for placemarkName
+	#newLatLon = placemarkCoordinates.split(',')
+	#new_lon = newLatLon[0]
+	#new_lat = newLatLon[1]
+	#placemarkName = get_location(new_lat, new_lon)
+	
+	
 	addChildElement(current_dom, new_placemark, 'name', placemarkName)
 	addChildElement(current_dom, new_placemark, 'description', placemarkDescription)
 	addChildElement(current_dom, new_placemark, 'updated', placemarkUpdated)
