@@ -2,7 +2,9 @@ import datetime
 import xml.dom.minidom as DOM
 from xml.dom.minidom import parseString
 from dateutil.parser import parse
+import json # used to parse json data from Google Maps API
 import urllib2 # library to do http requests
+import urllib # used for urlencode method
 
 now = datetime.datetime.now()
 print "\n\n> Started processing on " + now.strftime("%Y-%m-%d %H:%M:%S")
@@ -20,6 +22,66 @@ newPlacemarks = 0
 skippedPlacemarks = 0
 
 # -------------------------------------------------------
+
+# Gets json location data for a given lat/lon using the Google Maps API
+# Sourced from http://stackoverflow.com/a/8395513/130664
+def get_geonames(lat, lon, types):
+	url = 'http://maps.googleapis.com/maps/api/geocode/json' + \
+			'?latlng={},{}&sensor=false'.format(lat, lon)
+	jsondata = json.load(urllib2.urlopen(url))
+	address_comps = jsondata['results'][0]['address_components']
+	filter_method = lambda x: len(set(x['types']).intersection(types))
+	return filter(filter_method, address_comps)
+
+# Returns "City, ST, Country" for a given lat/lon
+def get_location(lat, lon):
+	
+	types = ['locality', 'administrative_area_level_1', 'country', 'postal_town']
+	location = ""
+	city = ""
+	state = ""
+	country = ""
+	
+	# Get geographical names
+	for geoname in get_geonames(lat, lon, types):
+		common_types = set(geoname['types']).intersection(set(types))
+		if 'postal_town' in common_types:
+			city = geoname['short_name']
+		elif 'locality' in common_types:
+			city = geoname['short_name']		
+		elif 'administrative_area_level_1' in common_types:
+			state = geoname['short_name']
+		elif 'country' in common_types:
+			country = geoname['long_name']	
+
+	# Build locaation using variables that contain data
+	for i in [city, state, country]:
+		if i != '': location += i + ', '
+	
+	# Remove extra comma and space from the end if necessary	
+	if location.endswith(', '): location = location[:-2]
+	
+	return location
+
+def publish_new_location(lat, lon):
+	#lat, lon = 59.3, 18.1
+	#lat, lon = -12.379895204279382, 130.85285505789852
+	coordinates = str(lat) + ',' + str(lon)
+	ncl_url = 'http://raamdev.dev/?'
+	ncl_api_key = 'Rsgzau8zSvEKYJw'
+#	print ">>> Updating WordPress Current Location plugin with coordinates %s" % (coordinates)
+	
+	location = get_location(lat, lon)
+	#print location
+
+	# urlencode query string and build the URL
+	f = { 'ncl_api_key' : ncl_api_key, 'location' : location, 'coordinates' : coordinates}
+	ncl_url = ncl_url + urllib.urlencode(f)
+	
+	# Call the URL, thereby updating the current location
+	urllib2.urlopen(ncl_url)
+
+# -------------------------------------------------------	
 
 def updateStats(statType):
 	"""Updates simple statistics about how many placemarks were processed"""
@@ -40,7 +102,7 @@ def updateCurrentLocation(currentBaseFolder):
 	"""Updates the 'Current Location' text on the latest Placemark"""
 	isNewestPlacemark = False
 	
-	newest_placemark_date = getNewestPublishedPlacemark(currentBaseFolder)
+	newest_placemark_date = getNewestPublishedPlacemarkDate(currentBaseFolder)
 	
 	# loop through placemarks looking for the <published> elemement that matches date of newest_placemark_date
 	for placemark in currentBaseFolder.getElementsByTagName("Placemark"):
@@ -61,6 +123,15 @@ def updateCurrentLocation(currentBaseFolder):
 					if not orig_desc.startswith("Current Location: "):	
 						desc.firstChild.replaceWholeText("Current Location: " + orig_desc)
 						print ">> Updated Current Location to '%s'" % desc.firstChild.wholeText.strip()
+			# Grab the coordinates for this placemark 			
+			pointElements = placemark.getElementsByTagName("Point")
+			for point in pointElements:
+				newPlacemarkCoordinates = point.getElementsByTagName("coordinates")[0].firstChild.wholeText.strip()
+				newLatLon = newPlacemarkCoordinates.split(',')
+				new_lon = newLatLon[0]
+				new_lat = newLatLon[1]
+				print ">> Updating WordPress Current Location plugin with new placemark coordinates: lon=%s lat=%s" % (new_lon, new_lat)
+				publish_new_location(new_lat, new_lon)
 		else:
 			# remove "Current Location: " from this description if necessary
 			if placemark.getElementsByTagName("description"):				
@@ -71,7 +142,7 @@ def updateCurrentLocation(currentBaseFolder):
 						desc.firstChild.replaceWholeText(desc.firstChild.wholeText.strip().replace("Current Location: ", ''))
 						print ">> Removed old Current Location from '%s'" % desc.firstChild.wholeText
 	
-def getNewestPublishedPlacemark(currentBaseFolder):
+def getNewestPublishedPlacemarkDate(currentBaseFolder):
 	"""search currentBaseFolder <Placemark>'s for newest <published> date"""	
 	newest_date = 0
 	
@@ -235,7 +306,7 @@ foursquare_base = getPlacemarksBase(foursquare_kml)
 # -------------------------------------------------------
 
 print "\n> Determining the newest Placemark in %r..." % current_kml_file
-offset_date = getNewestPublishedPlacemark(current_base)
+offset_date = getNewestPublishedPlacemarkDate(current_base)
 
 print "\n> Fetching Placemarks from Foursquare KML..."
 processFoursquarePlacemarks(current_dom, current_base, foursquare_base, offset_date)
