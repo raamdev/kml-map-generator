@@ -3,17 +3,25 @@ import xml.dom.minidom as DOM
 from xml.dom.minidom import parseString
 from dateutil.parser import parse
 
-# used to parse json data from Google Maps API
-try: import simplejson as json
-except ImportError: import json
-
 import urllib2 # library to do http requests
 import urllib # used for urlencode method
+
+# import Raam's GoogleWikipedia module 
+from GoogleWikipedia import getGoogleWikipediaArticleURL
+
+# import Raam's GPSToAddress module
+from GPSToAddress import convertCoordsToAddress
+
+# import Raam's NomadCurrentLocation module
+from NomadCurrentLocation import nclPublishNewLocation
+
+# -------------------------------------------------------
 
 now = datetime.datetime.now()
 print "\n\n> Started processing on " + now.strftime("%Y-%m-%d %H:%M:%S")
 
 # -------------------------------------------------------
+
 pathPlacemarkName = 'Path' # this is the name of the Placemark in current_kml_file that includes a LineString of the path
 
 # URL to your Foursquare KML feed (login to Foursquare and visit https://feeds.foursquare.com/history/)
@@ -25,69 +33,13 @@ current_kml_file = 'current_sample.kml'
 newPlacemarks = 0
 skippedPlacemarks = 0
 
-# -------------------------------------------------------
-
-# Gets json location data for a given lat/lon using the Google Maps API
-# Sourced from http://stackoverflow.com/a/8395513/130664
-def get_geonames(lat, lon, types):
-	url = 'http://maps.googleapis.com/maps/api/geocode/json?latlng=%s,%s&sensor=false' % (lat, lon)
-	jsondata = json.load(urllib2.urlopen(url))
-	address_comps = jsondata['results'][0]['address_components']
-	filter_method = lambda x: len(set(x['types']).intersection(types))
-	return filter(filter_method, address_comps)
-
-# Returns "City, ST, Country" for a given lat/lon
-def get_location(lat, lon):
-	
-	types = ['locality', 'administrative_area_level_1', 'country', 'postal_town']
-	location = ""
-	city = ""
-	state = ""
-	country = ""
-	
-	# Get geographical names
-	for geoname in get_geonames(lat, lon, types):
-		common_types = set(geoname['types']).intersection(set(types))
-		if 'postal_town' in common_types:
-			city = geoname['short_name']
-		elif 'locality' in common_types:
-			city = geoname['short_name']		
-		elif 'administrative_area_level_1' in common_types:
-			state = geoname['short_name']
-		elif 'country' in common_types:
-			country = geoname['long_name']	
-
-	# Build locaation using variables that contain data
-	for i in [city, state, country]:
-		if i != '': location += i + ', '
-	
-	# Remove extra comma and space from the end if necessary	
-	if location.endswith(', '): location = location[:-2]
-	
-	return location
-
-def publish_new_location(lat, lon):
-	#lat, lon = 59.3, 18.1
-	#lat, lon = -12.379895204279382, 130.85285505789852
-	coordinates = str(lat) + ',' + str(lon)
-	ncl_url = 'http://raamdev.dev/?'
-	ncl_api_key = 'Rsgzau8zSvEKYJw'
-#	print ">>> Updating WordPress Current Location plugin with coordinates %s" % (coordinates)
-	
-	location = get_location(lat, lon)
-	#print location
-
-	# urlencode query string and build the URL
-	f = { 'ncl_api_key' : ncl_api_key, 'location' : location, 'coordinates' : coordinates}
-	ncl_url = ncl_url + urllib.urlencode(f)
-	
-	# Call the URL, thereby updating the current location
-	urllib2.urlopen(ncl_url)
-
 # -------------------------------------------------------	
 
 def updateStats(statType):
-	"""Updates simple statistics about how many placemarks were processed"""
+	"""
+	Updates simple statistics about how many placemarks were processed
+	"""
+	
 	global newPlacemarks
 	global skippedPlacemarks
 	
@@ -98,11 +50,17 @@ def updateStats(statType):
 		skippedPlacemarks += 1
 
 def stripTags(string, startTag, endTag):
-	"""Strips startTag and endTag from string"""
+	"""
+	Strips startTag and endTag from string
+	"""
+	
 	return string.replace(startTag,'').replace(endTag,'')
 	
 def updateCurrentLocation(currentBaseFolder):
-	"""Updates the 'Current Location' text on the latest Placemark"""
+	"""
+	Updates the 'Current Location' text on the latest Placemark
+	"""
+	
 	isNewestPlacemark = False
 	
 	newest_placemark_date = getNewestPublishedPlacemarkDate(currentBaseFolder)
@@ -134,7 +92,7 @@ def updateCurrentLocation(currentBaseFolder):
 				new_lon = newLatLon[0]
 				new_lat = newLatLon[1]
 				print ">> Updating WordPress Current Location plugin with new placemark coordinates: lon=%s lat=%s" % (new_lon, new_lat)
-				publish_new_location(new_lat, new_lon)
+				nclPublishNewLocation(new_lat, new_lon)
 		else:
 			# remove "Current Location: " from this description if necessary
 			if placemark.getElementsByTagName("description"):				
@@ -146,7 +104,10 @@ def updateCurrentLocation(currentBaseFolder):
 						print ">> Removed old Current Location from '%s'" % desc.firstChild.wholeText
 	
 def getNewestPublishedPlacemarkDate(currentBaseFolder):
-	"""search currentBaseFolder <Placemark>'s for newest <published> date"""	
+	"""
+	search currentBaseFolder <Placemark>'s for newest <published> date
+	"""
+	
 	newest_date = 0
 	
 	# loop through placemarks looking for <published> elemements
@@ -162,7 +123,10 @@ def getNewestPublishedPlacemarkDate(currentBaseFolder):
 	return int(newest_date)
 
 def addChildElement(dom, parentElement, childElementName, elementText):
-	""" Adds child element to parentElement """
+	"""
+	Adds child element to parentElement
+	"""
+	
 	new_child = dom.createElement(childElementName)
 	parentElement.appendChild(new_child)
 	
@@ -175,7 +139,9 @@ def addChildElement(dom, parentElement, childElementName, elementText):
 	return lastChild
 
 def cleanFoursquareDescription(description):
-	"""Clean up the Foursquare description"""
+	"""
+	Clean up the Foursquare description
+	"""
 	
 	# remove XML tags
 	description = stripTags(description, '<description>', '</description>')
@@ -191,7 +157,9 @@ def cleanFoursquareDescription(description):
 	return description
 		
 def appendCurrentPlacemark(current_dom, currentBaseFolder, newPlacemark):
-	"""This recreates a placemark element and appends it to current_kml_file"""
+	"""
+	This recreates a placemark element and appends it to current_kml_file
+	"""
 	
 	new_placemark_dom = current_dom.createElement("Placemark")
 	currentBaseFolder.appendChild(new_placemark_dom)
@@ -209,7 +177,7 @@ def appendCurrentPlacemark(current_dom, currentBaseFolder, newPlacemark):
 	#newLatLon = placemarkCoordinates.split(',')
 	#new_lon = newLatLon[0]
 	#new_lat = newLatLon[1]
-	#placemarkName = get_location(new_lat, new_lon)
+	#placemarkName = convertCoordsToAddress(new_lat, new_lon)
 	
 	
 	addChildElement(current_dom, new_placemark, 'name', placemarkName)
@@ -225,7 +193,10 @@ def appendCurrentPlacemark(current_dom, currentBaseFolder, newPlacemark):
 	appendCurrentPathCoordinates(current_dom, currentBaseFolder, placemarkCoordinates)
 
 def appendCurrentPathCoordinates(current_dom, currentBaseFolder, new_coordinates):
-	"""Appends coordinates to an existing Path in current_kml_file"""
+	"""
+	Appends coordinates to an existing Path in current_kml_file
+	"""
+	
 	# loop through placemarks looking for the one that contains a name = pathPlacemarkName
 	for placemark in currentBaseFolder.getElementsByTagName("Placemark"):
 		isPathPlacemark = False
@@ -258,7 +229,9 @@ def appendCurrentPathCoordinates(current_dom, currentBaseFolder, new_coordinates
 				sys.exit(0)
 
 def processFoursquarePlacemarks(current_dom, currentBaseFolder, foursquareBaseFolder, offset_date):
-	"""Appends all Foursquare placemarks newer than offset_date to current_kml_file"""
+	"""
+	Appends all Foursquare placemarks newer than offset_date to current_kml_file
+	"""
 	
 	# go through each <Placemark> in reverse, fetch <published> date, 
 	# compare to offset_date, then append to current_kml_file if newer
@@ -279,7 +252,10 @@ def processFoursquarePlacemarks(current_dom, currentBaseFolder, foursquareBaseFo
 			updateStats('skipped')
 
 def getPlacemarksBase(kmlBase):
-	"""Determines the layout of kmlBase and returns the base element where <Placemark>'s reside"""
+	"""
+	Determines the layout of kmlBase and returns the base element where <Placemark>'s reside
+	"""
+	
 	if kmlBase.getElementsByTagName("Document"):
 		#print "This KML file has a <Document> element!"
 		placemarksBase = kmlBase.getElementsByTagName("Document")[0]
