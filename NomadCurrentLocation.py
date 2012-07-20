@@ -7,7 +7,7 @@ from GoogleWikipedia import getGoogleWikipediaArticleURL
 # import Raam's GPSToAddress module
 from GPSToAddress import convertCoordsToAddress
 
-def nclPublishNewLocation(lat, lon):
+def nclPublishNewLocation(lat, lon, updated_date):
 	"""
 	Publishes new location data to the Nomad Current Location WordPress Plugin
 	"""
@@ -25,7 +25,7 @@ def nclPublishNewLocation(lat, lon):
 	wiki_article_url = getGoogleWikipediaArticleURL(location)
 
 	# urlencode query string and build the URL
-	f = { 'ncl_api_key' : ncl_api_key, 'location' : location, 'coordinates' : coordinates, 'wiki_url' : wiki_article_url }
+	f = { 'ncl_api_key' : ncl_api_key, 'location' : location, 'coordinates' : coordinates, 'wiki_url' : wiki_article_url, 'updated' : updated_date }
 	ncl_url = ncl_url + urllib.urlencode(f)
 	
 	# Call the URL, thereby updating the current location

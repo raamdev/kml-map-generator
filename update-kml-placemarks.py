@@ -1,4 +1,5 @@
 import datetime
+import time # used for getting local timezone offset to convert to UTC
 import xml.dom.minidom as DOM
 from xml.dom.minidom import parseString
 from dateutil.parser import parse
@@ -84,6 +85,15 @@ def updateCurrentLocation(currentBaseFolder):
 					if not orig_desc.startswith("Current Location: "):	
 						desc.firstChild.replaceWholeText("Current Location: " + orig_desc)
 						print ">> Updated Current Location to '%s'" % desc.firstChild.wholeText.strip()
+			
+			# Grab the updated date and convert it to Unixtime in UTC
+			if placemark.getElementsByTagName("updated"):
+				updated_date = placemark.getElementsByTagName("updated")
+				for date in updated_date:
+					date_offset = time.timezone
+					new_date = parse(date.firstChild.wholeText).strftime('%s')
+					new_date = int(new_date) - date_offset
+
 			# Grab the coordinates for this placemark 			
 			pointElements = placemark.getElementsByTagName("Point")
 			for point in pointElements:
@@ -92,7 +102,7 @@ def updateCurrentLocation(currentBaseFolder):
 				new_lon = newLatLon[0]
 				new_lat = newLatLon[1]
 				print ">> Updating WordPress Current Location plugin with new placemark coordinates: lon=%s lat=%s" % (new_lon, new_lat)
-				nclPublishNewLocation(new_lat, new_lon)
+				nclPublishNewLocation(new_lat, new_lon, new_date)
 		else:
 			# remove "Current Location: " from this description if necessary
 			if placemark.getElementsByTagName("description"):				
