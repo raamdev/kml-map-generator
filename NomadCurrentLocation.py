@@ -2,10 +2,10 @@ import urllib2 # library to do http requests
 import urllib # used for urlencode method
 
 # import Raam's GoogleWikipedia module 
-from GoogleWikipedia import getGoogleWikipediaArticleURL
+from GoogleWikipedia import *
 
 # import Raam's GPSToAddress module
-from GPSToAddress import convertCoordsToAddress
+from GPSToAddress import *
 
 def nclPublishNewLocation(lat, lon, updated_date):
 	"""
@@ -20,9 +20,14 @@ def nclPublishNewLocation(lat, lon, updated_date):
 	
 	# Convert coordinates into textual location (City, State, Country)
 	location = convertCoordsToAddress(lat, lon)
+	wiki_location = yahooConvertCoordsToAddress(lat, lon)
 	
 	# Grab Wikipedia article URL for given location
-	wiki_article_url = getGoogleWikipediaArticleURL(location)
+	wiki_article_url = getGoogleWikipediaArticleURL(wiki_location)
+	
+	# Workaround for weird bug that occasionally returns just Wikipeda URL and not URL to Wikipedia page
+	if wiki_article_url == 'http://www.wikipedia.org/':
+		wiki_article_url = '' # We'd rahter have no URL than the wrong one
 
 	# urlencode query string and build the URL
 	f = { 'ncl_api_key' : ncl_api_key, 'location' : location, 'coordinates' : coordinates, 'wiki_url' : wiki_article_url, 'updated' : updated_date }

@@ -44,3 +44,29 @@ def convertCoordsToAddress(lat, lon):
 	if location.endswith(', '): location = location[:-2]
 	
 	return location
+	
+def yahooConvertCoordsToAddress(lat, lon):
+	"""
+	Returns "City, ST, Country" for a given lat/lon
+	e.g., print yahooConvertCoordsToAddress('-23.696814434112007', '133.87293043431177')
+	"""
+	appID = 'xxxxxx' # Yahoo Application ID (required for making API requests); see http://developer.yahoo.com/geo/placefinder/
+	location = ""
+	city = ""
+	state = ""
+	country = ""
+
+	url = 'http://where.yahooapis.com/geocode?q=%s,%s&gflags=R&flags=J&appid=%s' % (lat, lon, appID)
+	jsondata = json.load(urllib2.urlopen(url))
+	city = jsondata['ResultSet']['Results'][0]['city'] # city
+	state = jsondata['ResultSet']['Results'][0]['statecode'] # statecode
+	country = jsondata['ResultSet']['Results'][0]['country'] # country
+
+	# Build locaation using variables that contain data
+	for i in [city, state, country]:
+		if i != '': location += i + ', '
+
+	# Remove extra comma and space from the end if necessary	
+	if location.endswith(', '): location = location[:-2]
+
+	return location
